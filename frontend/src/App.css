@@ -1,0 +1,213 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* General App Styles */
+.App {
+  text-align: center;
+}
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  margin-bottom: 20px;
+}
+.App-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+}
+
+/* Controls Panel */
+.controls-container {
+  width: 100%;
+  max-width: 1400px;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-items: flex-start;
+  gap: 20px;
+}
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  padding: 15px;
+  border-radius: 5px;
+  min-width: 200px;
+}
+.control-group h4 {
+  margin: 0 0 10px 0;
+  color: #555;
+}
+.control-group label {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
+  /* Change the font color */
+}
+.controls button {
+  padding: 10px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+.controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.controls .generate-button-preview {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+.controls .generate-button-final {
+  background-color: #4caf50;
+  color: white;
+  border-color: #4caf50;
+  font-weight: bold;
+}
+.controls input[type="range"] {
+  width: 150px;
+}
+
+/* Main 3-over-2 Grid Layout */
+.main-grid {
+  display: grid;
+  width: 100%;
+  max-width: 1400px; /* Wider layout */
+  gap: 20px;
+  /* Define 3 columns for the top row, and use areas for placement */
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    "highlight canny   preview"
+    "details   final   final"; /* The final sketch spans two columns */
+}
+
+.grid-item {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* Align content to the top */
+  min-height: 300px;
+}
+
+.grid-item h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+  width: 100%;
+  text-align: center;
+}
+
+.grid-item canvas,
+.grid-item img {
+  max-width: 100%;
+  max-height: 400px;
+  height: auto;
+  border: 1px solid #eee;
+  object-fit: contain;
+}
+
+.placeholder {
+  width: 100%;
+  flex-grow: 1; /* Make placeholder fill available space */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f0f0;
+  color: #aaa;
+  border-radius: 8px;
+  font-size: 1.2em;
+}
+
+/* Loading Spinner and Overlay (Unchanged) */
+.loading-overlay {
+  /* ... */
+}
+.loader {
+  /* ... */
+}
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* Responsive Grid */
+@media (max-width: 1024px) {
+  .main-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns for tablets */
+    grid-template-areas:
+      "highlight canny"
+      "preview   preview"
+      "details   details"
+      "final     final";
+  }
+}
+
+@media (max-width: 600px) {
+  .main-grid {
+    grid-template-columns: 1fr; /* Stack all items on mobile */
+    grid-template-areas:
+      "highlight"
+      "canny"
+      "preview"
+      "details"
+      "final";
+  }
+}
