@@ -130,11 +130,19 @@ class EdgeOptimizer:
 
     # This is the NEW optimization function based on the energy formulation
     def optimize_edges_energy(
-        self, main_body_mask=None, detail_mask=None, lambda1=1.5, lambda2=2.0
+        self,
+        main_body_mask=None,
+        detail_mask=None,
+        lambda1=1.0,
+        lambda2=5.0,
+        # lambda2=3.0,
+        nms_radius=2,
     ):
         """
-        Optimizes edge selection by greedily minimizing the energy function.
-        Uses a priority queue for efficiency.
+        通过能量最小化和空间非极大值抑制来优化边缘选择。
+        - lambda1: 连接性奖励
+        - lambda2: 平行线惩罚 (权重已调高)
+        - nms_radius: 非极大值抑制的邻域半径
         """
 
         # 1. Determine Search Space & Budget
@@ -182,46 +190,66 @@ class EdgeOptimizer:
 
         # 4. Greedy Selection Loop
         selected_count = np.sum(current_selection)
+        temp_selection = current_selection.copy()  # 在一个临时副本上操作
         while pq and selected_count < budget:
             # Get pixel with the highest marginal gain
             neg_gain, y, x = heapq.heappop(pq)
             gain = -neg_gain
 
             # Stale entry check: if the popped gain is not the current gain, skip it
-            if gain < pixel_gains.get((y, x), -1):
+            if gain < pixel_gains.get((y, x), -1) or temp_selection[y, x]:
                 continue
 
-            # If already selected (by a user mask after initialization), skip
-            if current_selection[y, x]:
-                continue
-
-            # Add pixel to solution
-            current_selection[y, x] = True
+            temp_selection[y, x] = True
             selected_count += 1
 
             # Update gains of its neighbors
-            for ny, nx in self._get_neighbors(y, x):
-                if valid_edges_mask[ny, nx] and not current_selection[ny, nx]:
-                    # Current gain of the neighbor
+            for ny, nx in self._get_neighbors(y, x, radius=1):
+                if valid_edges_mask[ny, nx] and not temp_selection[ny, nx]:
                     neighbor_gain = pixel_gains.get(
                         (ny, nx), self.gradient_magnitude[ny, nx]
                     )
-
-                    # Add connectivity reward (+lambda1)
                     neighbor_gain += lambda1
-
-                    # Add parallel penalty (-lambda2 * cos^2)
-                    angle_p = self.gradient_angle[y, x]
-                    angle_q = self.gradient_angle[ny, nx]
-                    cos_theta_sq = np.cos(angle_p - angle_q) ** 2
+                    cos_theta_sq = (
+                        np.cos(self.gradient_angle[y, x] - self.gradient_angle[ny, nx])
+                        ** 2
+                    )
                     neighbor_gain -= lambda2 * cos_theta_sq
-
-                    # Update the gain and push to the priority queue
                     pixel_gains[(ny, nx)] = neighbor_gain
                     heapq.heappush(pq, (-neighbor_gain, ny, nx))
 
+        # --- 阶段 2: 空间非极大值抑制 (关键新增步骤) ---
+        final_selection = np.zeros_like(temp_selection, dtype=bool)
+        selected_y, selected_x = np.where(temp_selection)
+
+        # 创建一个标记，记录哪些点已经被处理过（作为邻居被抑制掉了）
+        processed_mask = np.zeros_like(temp_selection, dtype=bool)
+
+        # 按梯度强度从高到低排序，确保强者生存
+        sorted_indices = np.argsort(self.gradient_magnitude[selected_y, selected_x])[
+            ::-1
+        ]
+
+        for idx in sorted_indices:
+            y, x = selected_y[idx], selected_x[idx]
+
+            # 如果这个点已经被处理（抑制）过了，就跳过
+            if processed_mask[y, x]:
+                continue
+
+            # 否则，这个点是局部最强者，保留它
+            final_selection[y, x] = True
+
+            # 并且抑制它周围邻域内的所有其他点
+            # 定义邻域范围
+            y_min, y_max = max(0, y - nms_radius), min(self.height, y + nms_radius + 1)
+            x_min, x_max = max(0, x - nms_radius), min(self.width, x + nms_radius + 1)
+
+            # 将邻域内所有点标记为已处理
+            processed_mask[y_min:y_max, x_min:x_max] = True
+
         # 5. Post-processing for final style
-        sketch = current_selection.astype(np.uint8) * 255
+        sketch = final_selection.astype(np.uint8) * 255
         kernel = np.ones((3, 3), np.uint8)
         sketch = cv2.dilate(sketch, kernel, iterations=1)
         sketch = cv2.medianBlur(sketch, 3)
