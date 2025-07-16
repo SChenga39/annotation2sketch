@@ -12,7 +12,7 @@ function App() {
   const [previewSketch, setPreviewSketch] = useState(null); // 上方草图
   const [finalSketch, setFinalSketch] = useState(null);     // 下方草图
   const [controlParams, setControlParams] = useState(null);
-  const [brushSize, setBrushSize] = useState(15);
+  const [brushSize, setBrushSize] = useState(15); // Brush size state 统一在这里管理
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -118,20 +118,28 @@ function App() {
   };
 
   const handleAutoTuneCanny = async () => {
-    // ... (This function remains unchanged)
-     if (!session.id) return;
+    if (!session.id) return;
+    setIsLoading(true);
+    // 获取主体高亮蒙版
+    const mainBodyMask = mainBodyCanvasApi.current.getMaskAsBase64();
     try {
         const response = await fetch(`${API_BASE_URL}/autotune-canny`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: session.id })
+            body: JSON.stringify({
+                session_id: session.id,
+                main_body_mask_b64: mainBodyMask // 发送蒙版
+            })
         });
         if (!response.ok) throw new Error('Auto-tuning failed.');
         const data = await response.json();
+        // 更新滑块和 Canny 结果
         setControlParams({ cannyLow: data.canny_low, cannyHigh: data.canny_high });
         await handleCannyChange({ cannyLow: data.canny_low, cannyHigh: data.canny_high });
     } catch (err) {
         setError(err.message);
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -159,6 +167,8 @@ function App() {
             onAutoTune={handleAutoTuneCanny}
             disabled={isLoading}
             initialParams={controlParams}
+            brushSize={brushSize}
+            onBrushSizeChange={setBrushSize}
           />
            {error && <p className="error-message">{error}</p>}
         </div>
@@ -172,7 +182,7 @@ function App() {
             <ImageCanvas
               ref={mainBodyCanvasApi}
               baseImage={session.originalImage}
-              brushColor="rgba(0, 255, 0, 0.5)"
+              brushColor="rgba(0, 255, 0, 0.7)"
               brushSize={brushSize}
               imageSize={session.imageSize}
             />
@@ -192,7 +202,7 @@ function App() {
             <ImageCanvas
               ref={detailCanvasApi}
               baseImage={session.originalImage}
-              brushColor="rgba(255, 165, 0, 0.5)"
+              brushColor="rgba(255, 165, 0, 0.7)"
               brushSize={brushSize}
               imageSize={session.imageSize}
             />

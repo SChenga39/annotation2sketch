@@ -1,20 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
+// 注意 props 新增了 brushSize 和 onBrushSizeChange
 function Controls({
   session,
   onImageUpload,
-  onGeneratePreview, // 新增
-  onGenerateFinal,   // 新增
+  onGeneratePreview,
+  onGenerateFinal,
   onClear,
   onCannyChange,
   onAutoTune,
   disabled,
-  initialParams
+  initialParams,
+  brushSize,
+  onBrushSizeChange
 }) {
-  const [budget, setBudget] = useState(0.3);
-  const [cannyLow, setCannyLow] = useState(50);
-  const [cannyHigh, setCannyHigh] = useState(150);
-  const [brushSize, setBrushSize] = useState(15);
+  const [budget, setBudget] = React.useState(0.3);
+  const [cannyLow, setCannyLow] = React.useState(initialParams?.cannyLow || 50);
+  const [cannyHigh, setCannyHigh] = React.useState(initialParams?.cannyHigh || 150);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ function Controls({
       <div className="control-group">
         <h4>Brush & Detail</h4>
         <label>Brush Size: {brushSize}</label>
-        <input type="range" min="2" max="50" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} disabled={!session}/>
+        <input type="range" min="2" max="50" value={brushSize} onChange={(e) => onBrushSizeChange(parseInt(e.target.value))} disabled={!session}/>
         <label>Detail Level (Budget): {budget.toFixed(2)}</label>
         <input type="range" min="0.1" max="1.0" step="0.05" value={budget} onChange={(e) => setBudget(parseFloat(e.target.value))} disabled={!session}/>
       </div>

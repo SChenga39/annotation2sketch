@@ -97,38 +97,46 @@ async def update_canny(request: CannyRequest):
 
 @app.post("/process", response_model=ProcessResponse)
 async def process_image(request: ProcessRequest):
-    if request.session_id not in optimizer_cache:
+    optimizer = optimizer_cache.get(request.session_id)
+    if not optimizer:
         raise HTTPException(status_code=404, detail="Session not found.")
-
-    optimizer = optimizer_cache[request.session_id]
 
     if request.budget_ratio is not None:
         optimizer.budget_ratio = request.budget_ratio
         optimizer.update_canny_edges()
 
-    final_keep_mask = np.zeros_like(optimizer.gray, dtype=bool)
+    main_mask = (
+        base64_to_np(request.main_body_mask_b64) > 0
+        if request.main_body_mask_b64
+        else None
+    )
+    detail_mask = (
+        base64_to_np(request.detail_mask_b64) > 0 if request.detail_mask_b64 else None
+    )
 
-    if request.main_body_mask_b64:
-        main_mask = base64_to_np(request.main_body_mask_b64) > 0
-        final_keep_mask |= main_mask
-
-    if request.detail_mask_b64:
-        detail_mask = base64_to_np(request.detail_mask_b64) > 0
-        final_keep_mask |= detail_mask
-
-    optimizer.set_user_constraints(final_keep_mask)
-    optimized_sketch = optimizer.optimize_edges()
+    # 调用修改后的优化函数
+    optimized_sketch = optimizer.optimize_edges(
+        main_body_mask=main_mask, detail_mask=detail_mask
+    )
 
     return ProcessResponse(sketch_b64=np_to_base64(optimized_sketch))
 
 
 @app.post("/autotune-canny", response_model=AutoTuneResponse)
-async def autotune(request: ProcessRequest):
-    if request.session_id not in optimizer_cache:
+async def autotune(request: ProcessRequest):  # 复用 ProcessRequest 来接收蒙版
+    optimizer = optimizer_cache.get(request.session_id)
+    if not optimizer:
         raise HTTPException(status_code=404, detail="Session not found.")
 
-    optimizer = optimizer_cache[request.session_id]
-    low, high = auto_canny(optimizer.gray)
+    # 检查是否提供了主体蒙版
+    main_mask = (
+        base64_to_np(request.main_body_mask_b64) > 0
+        if request.main_body_mask_b64
+        else None
+    )
+
+    # 调用新的 auto_canny
+    low, high = auto_canny(optimizer.gray, mask=main_mask)
     optimizer.update_canny_parameters(low, high)
 
     return AutoTuneResponse(canny_low=low, canny_high=high)
