@@ -115,7 +115,10 @@ async def process_image(request: ProcessRequest):
     )
 
     # 调用修改后的优化函数
-    optimized_sketch = optimizer.optimize_edges(
+    # optimized_sketch = optimizer.optimize_edges(
+    #     main_body_mask=main_mask, detail_mask=detail_mask
+    # )
+    optimized_sketch = optimizer.optimize_edges_energy(
         main_body_mask=main_mask, detail_mask=detail_mask
     )
 
